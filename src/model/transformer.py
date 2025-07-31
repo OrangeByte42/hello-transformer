@@ -53,6 +53,8 @@ class Transformer(nn.Module):
             device=device
         )
 
+        self.to(device)     # Move entire transformer to device
+
     def _make_src_mask(self: Any, src_X: torch.Tensor) -> torch.Tensor:
         """create source mask
         @param src_X: source input tensor of shape (batch_size, seq_len)
@@ -67,7 +69,7 @@ class Transformer(nn.Module):
         """
         trg_pad_mask: torch.Tensor = (trg_X != self.trg_pad_idx).unsqueeze(1).unsqueeze(3)
         trg_len: int = trg_X.shape[1]
-        trg_sub_mask: torch.Tensor = torch.tril(torch.ones(trg_len, trg_len)).type(torch.ByteTensor).to(self.device)
+        trg_sub_mask: torch.Tensor = torch.tril(torch.ones(trg_len, trg_len, device=trg_X.device, dtype=torch.bool))
         trg_mask: torch.Tensor = trg_pad_mask & trg_sub_mask
         return trg_mask
 

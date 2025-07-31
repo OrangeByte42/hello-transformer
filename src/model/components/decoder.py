@@ -37,6 +37,8 @@ class Decoder(nn.Module):
         ) for _ in range(num_layers)])
         self.fc: nn.Linear = nn.Linear(d_model, decoder_vocab_size)
 
+        self.to(device)     # Move entire decoder to device
+
     def forward(self: Any, decoder_input_X: torch.Tensor, encoder_output_X: torch.Tensor,
                 src_mask: torch.Tensor, cross_mask: torch.Tensor) -> torch.Tensor:
         """apply decoder

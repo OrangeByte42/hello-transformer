@@ -62,12 +62,18 @@ class TransformerEmbedding(nn.Module):
         self.token_embedding: TokenEmbedding = TokenEmbedding(vocab_size=vocab_size, d_model=d_model)
         self.positional_encoding: PositionalEncoding = PositionalEncoding(d_model=d_model, max_seq_len=max_seq_len, device=device)
         self.dropout: nn.Dropout = nn.Dropout(p=drop_prob)
+        self.device: torch.device = device
+
+        # Move token embedding to device
+        self.token_embedding.to(device)
 
     def forward(self: Any, X: torch.Tensor) -> torch.Tensor:
         """add token embedding and positional encoding to the input sequence
         @param X: input sequence of shape (batch_size, seq_len)
         @return: embedded sequence of shape (batch_size, seq_len, d_model)
         """
+        # Ensure X is on the correct device
+        X = X.to(self.device)
         token_embedded: torch.Tensor = self.token_embedding(X) * math.sqrt(self.token_embedding.embedding_dim)
         pos_encoded: torch.Tensor = self.positional_encoding(token_embedded)
         return self.dropout(token_embedded + pos_encoded)

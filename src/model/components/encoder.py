@@ -36,6 +36,8 @@ class Encoder(nn.Module):
             drop_prob=drop_prob
         ) for _ in range(num_layers)])
 
+        self.to(device)     # Move entire encoder to device
+
     def forward(self: Any, X: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """apply encoder
         @param X: input tensor of shape (batch_size, seq_len)

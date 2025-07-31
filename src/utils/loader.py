@@ -1,9 +1,10 @@
 import os
-import torch
 import datasets
+import torch
+import torch.distributed as dist
 from datasets import load_dataset
 from transformers import AutoTokenizer
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, DistributedSampler
 from typing import Any, List, Tuple
 
 
@@ -57,6 +58,7 @@ class DataLoader4Multi30k:
         """Load the Multi30k dataset and return DataLoaders for training, validation, and test sets
         @return: DataLoaders for training, validation, and test sets
         """
+
         # Tokenize the datasets
         train_de_tokenized = [self._tokenize_de(text) for text in self.dataset["train"]["de"]]
         train_en_tokenized = [self._tokenize_en(text) for text in self.dataset["train"]["en"]]
@@ -66,14 +68,22 @@ class DataLoader4Multi30k:
 
         test_de_tokenized = [self._tokenize_de(text) for text in self.dataset["test"]["de"]]
         test_en_tokenized = [self._tokenize_en(text) for text in self.dataset["test"]["en"]]
+
         # Create TensorDatasets
         train_data: TensorDataset = self._create_tensor_dataset(train_de_tokenized, train_en_tokenized)
         val_data: TensorDataset = self._create_tensor_dataset(val_de_tokenized, val_en_tokenized)
         test_data: TensorDataset = self._create_tensor_dataset(test_de_tokenized, test_en_tokenized)
+
+        # Create DistributedSampler
+        train_sampler: DistributedSampler = DistributedSampler(train_data, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=True)
+        val_sampler: DistributedSampler = DistributedSampler(val_data, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+        test_sampler: DistributedSampler = DistributedSampler(test_data, num_replicas=dist.get_world_size(), rank=dist.get_rank(), shuffle=False)
+
         # Create DataLoaders
-        train_loader: DataLoader = DataLoader(train_data, batch_size=self.batch_size, shuffle=True)
-        val_loader: DataLoader = DataLoader(val_data, batch_size=self.batch_size, shuffle=False)
-        test_loader: DataLoader = DataLoader(test_data, batch_size=self.batch_size, shuffle=False)
+        train_loader: DataLoader = DataLoader(train_data, batch_size=self.batch_size, sampler=train_sampler)
+        val_loader: DataLoader = DataLoader(val_data, batch_size=self.batch_size, sampler=val_sampler)
+        test_loader: DataLoader = DataLoader(test_data, batch_size=self.batch_size, sampler=test_sampler)
+
         # Return DataLoaders
         return train_loader, val_loader, test_loader
 

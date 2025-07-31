@@ -1,8 +1,8 @@
 import torch
 
 
-# Device configuration
-DEVICE: torch.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# Device configuration - Remove hardcoded device, let DDP handle device assignment
+# DEVICE: torch.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Dataset configuration
 DATASET_NAME: str = "bentrevett/multi30k"
