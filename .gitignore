@@ -1,0 +1,10 @@
+.venv/
+.vscode/
+
+data/*
+checkpoints/*
+out/*
+
+**/__pycache__
+
+
