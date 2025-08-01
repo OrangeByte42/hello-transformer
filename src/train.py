@@ -1,6 +1,7 @@
 import os
 import math
 import time
+import datetime
 import torch
 
 from typing import Any, List, Tuple
@@ -32,21 +33,20 @@ def train_epoch(model: nn.Module, train_iter: torch.utils.data.DataLoader,
         src_X, trg_X = batch
         src_X, trg_X = src_X.to(torch.device(rank)), trg_X.to(torch.device(rank))
         # Infer model output
-        optimizer.zero_grad()
         output: torch.Tensor = model(src_X, trg_X[:, :-1])
         output_reshape: torch.Tensor = output.contiguous().view(-1, output.shape[-1])
         trg_X_reshape: torch.Tensor = trg_X[:, 1:].contiguous().view(-1)
         # Calculate loss
         loss: torch.Tensor = criterion(output_reshape, trg_X_reshape)
+        optimizer.zero_grad()
+        # scaler.scale(loss).backward()   # Backpropagation with mixed precision
         loss.backward()
         # Gradient clipping
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
-        optimizer.step()
+        optimizer.step()     # Step optimizer
         # Update epoch loss
         epoch_loss += loss.item()
         total_batches += 1
-        # Echo training progress
-        # print(f'step: {round((idx + 1) / len(train_iter) * 100, 2)}%, loss: {loss.item():.4f}')
 
     # Aggregate training loss across all processes
     local_loss = torch.tensor(epoch_loss, device=torch.device(rank))
@@ -121,6 +121,7 @@ def train(model: Any, train_loader: DataLoader, val_loader: DataLoader,
             rank: int, trg_tokenizer: Any) -> None:
     """Train the transformer model"""
     best_loss: float = INF
+    best_bleu: float = 0.0
     train_losses, test_losses, bleu_scores = [], [], []
     for epoch in range(EPOCHS_NUM):
         start_time: float = time.time()
@@ -139,7 +140,8 @@ def train(model: Any, train_loader: DataLoader, val_loader: DataLoader,
 
         # Only save model and write files on rank 0 to avoid conflicts
         if rank == 0:
-            if valid_loss < best_loss:
+            if bleu_score > best_bleu and valid_loss < best_loss:
+                best_bleu = bleu_score
                 best_loss = valid_loss
                 os.makedirs("checkpoints", exist_ok=True)
                 torch.save(model.module.state_dict(), os.path.join("checkpoints", f"model-loss-{valid_loss:.4f}-bleu-{bleu_score:.4f}.pt"))
@@ -154,10 +156,10 @@ def train(model: Any, train_loader: DataLoader, val_loader: DataLoader,
             with open(os.path.join("out", "bleu_scores.txt"), "w") as f:
                 f.write(str(bleu_scores))
 
-            print(f"Epoch: {epoch + 1:0>{len(str(EPOCHS_NUM))}}/{EPOCHS_NUM} | Time: {epoch_mins}m {epoch_secs}s")
-            print(f"\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}")
-            print(f"\tVal Loss: {valid_loss:.3f} | Val PPL: {math.exp(valid_loss):7.3f}")
-            print(f"\tVal BLEU: {bleu_score:.3f}")
+            print(f"Epoch: {epoch + 1:0>{len(str(EPOCHS_NUM))}}/{EPOCHS_NUM} | Time: {epoch_mins:0>2}m {epoch_secs:0>2}s :: ", end="  ")
+            print(f"Train Loss: {train_loss:<6.3f} | Train PPL: {math.exp(train_loss):<8.3f}", end="  ")
+            print(f"Val Loss: {valid_loss:<6.3f} | Val PPL: {math.exp(valid_loss):<8.3f}", end="  ")
+            print(f"Val BLEU: {bleu_score:<6.3f}")
 
         # Synchronize all processes after each epoch
         dist.barrier()
@@ -168,16 +170,19 @@ if __name__ == "__main__":
     assert torch.cuda.is_available(), "This code requires a GPU with CUDA support."
     assert torch.cuda.device_count() > 0, "This code requires at least two GPUs for distributed training."
 
-    print(f"torch cuda available: {torch.cuda.is_available()}")
-    print(f"torch cuda device count: {torch.cuda.device_count()}")
-
     # Initialize distributed training
     world_size: int = int(os.environ["WORLD_SIZE"])     # Total number of processes (GPUs)
     rank: int = int(os.environ["RANK"])     # Rank of the current process
+    local_rank: int = int(os.environ["LOCAL_RANK"])     # Local rank of the current process
 
-    torch.cuda.set_device(rank)     # Set device for current process
+    if rank == 0:
+        print(f"torch cuda available: {torch.cuda.is_available()}")
+        print(f"torch cuda device count: {torch.cuda.device_count()}")
+
     torch.backends.cudnn.benchmark = True   # Enable benchmark mode for faster training
-    dist.init_process_group(backend='nccl', world_size=world_size, rank=rank, init_method='env://')
+    torch.cuda.set_device(local_rank)     # Set device for current process
+    dist.init_process_group(backend='nccl', world_size=world_size, rank=rank, init_method='env://',
+                            timeout=datetime.timedelta(seconds=300))    # Avoid timeout issues in distributed training
     dist.barrier()      # Synchronize all processes before starting training
 
     # Load Data
@@ -209,9 +214,10 @@ if __name__ == "__main__":
         device=torch.device(rank),  # Use correct device for this rank
     )
 
-    total_params, trainable_params = count_parameters(transformer)
-    print(f"The transformer model has {total_params:,} ({float(total_params) / float(1_000_000_000):.2f}B) parameters.")
-    print(f"The transformer model has {trainable_params:,} ({float(trainable_params) / float(1_000_000_000):.2f}B) trainable parameters.")
+    if rank == 0:
+        total_params, trainable_params = count_parameters(transformer)
+        print(f"The transformer model has {total_params:,} ({float(total_params) / float(1_000_000_000):.2f}B) parameters.")
+        print(f"The transformer model has {trainable_params:,} ({float(trainable_params) / float(1_000_000_000):.2f}B) trainable parameters.")
 
     # Initialize Weights
     def init_weights(m: nn.Module) -> None:

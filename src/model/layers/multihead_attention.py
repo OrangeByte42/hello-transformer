@@ -28,7 +28,8 @@ class ScaledDotProductAttention(nn.Module):
         # Apply the mask if provided
         if mask is not None:
             # attention_scores = attention_scores.masked_fill(mask == 0, float('-inf'))
-            attention_scores = attention_scores.masked_fill(mask == 0, -1e9)
+            neg_inf: float = torch.finfo(attention_scores.dtype).min
+            attention_scores = attention_scores.masked_fill(mask == 0, neg_inf)
         # Compute the attention weights
         attention_weights: torch.Tensor = self.softmax(attention_scores)
         # Compute the output

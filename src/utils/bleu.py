@@ -48,14 +48,10 @@ def idx2word(idxs: List[int], tokenizer: Any) -> str:
     @param tokenizer: Tokenizer object with convert_ids_to_tokens method.
     @return: String of words corresponding to the indices.
     """
-    words: List[str] = list()
-    tokens = tokenizer.convert_ids_to_tokens(idxs)
-    for token in tokens:
-        # Skip special tokens like [CLS], [SEP], [PAD], etc.
-        if not (token.startswith('[') and token.endswith(']')) and token != '<unk>':
-            words.append(token)
-    words: str = ' '.join(words)
-    return words
+    # Use tokenizer's decode method to properly handle special tokens and subwords
+    # This automatically handles WordPiece tokens like ##ing and special tokens
+    text = tokenizer.decode(idxs, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    return text.strip()
 
 
 
