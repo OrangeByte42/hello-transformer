@@ -12,11 +12,10 @@ from torch import distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from src.config.config import *
-from src.utils.loader import DataLoader4Multi30k
+from src.utils.dataloader.multi30k_loader import Multi30kDataLoader
 from src.model.transformer import Transformer
-from src.utils.bleu import bleu
-from src.utils.timer import epoch_time
-from src.utils.utils import count_parameters, cleanup
+from src.utils.evaluator.bleu import BLEUSccoreEvaluator
+from src.utils.utils import count_parameters, cleanup, epoch_time
 
 
 # Training Loop
@@ -277,10 +276,10 @@ def evaluate(model: nn.Module, valid_iter: torch.utils.data.DataLoader,
                 # ensures that SOS, EOS, PAD tokens are removed from the decoded string.
                 # `clean_up_tokenization_spaces=True` helps with readability.
                 trg_decoded_str = trg_tokenizer.decode(
-                    trg_tokens_raw, skip_special_tokens=True, clean_up_tokenization_spaces=True
+                    trg_tokens_raw, skip_special_tokens=True
                 )
                 pred_decoded_str = trg_tokenizer.decode(
-                    pred_tokens_raw, skip_special_tokens=True, clean_up_tokenization_spaces=True
+                    pred_tokens_raw, skip_special_tokens=True
                 )
                 
                 # Append to global lists as tokenized words
@@ -325,11 +324,10 @@ def evaluate(model: nn.Module, valid_iter: torch.utils.data.DataLoader,
         # Call your custom corpus-level BLEU function
         # Using smoothing=True is generally recommended, especially in early training,
         # to avoid zero precision for rare N-grams, which would result in 0 BLEU.
-        global_bleu_score = bleu(
+        bleu_evaluator: BLEUSccoreEvaluator = BLEUSccoreEvaluator(max_n_gram=4, smoothing=True)
+        global_bleu_score = bleu_evaluator.calculate_bleu(
             hypothesis_corpus=flat_hypothesis_corpus,
-            references_corpus=flat_references_corpus,
-            max_n_gram=4,
-            smoothing=True # It's good practice to use smoothing for BLEU
+            references_corpus=flat_references_corpus
         )
         print(f"Rank {rank}: Global BLEU (Custom Corpus-level) for current epoch: {global_bleu_score:.3f}")
 
@@ -411,12 +409,14 @@ if __name__ == "__main__":
     dist.barrier()      # Synchronize all processes before starting training
 
     # Load Data
-    data_loader: DataLoader4Multi30k = DataLoader4Multi30k(
+    data_loader: Multi30kDataLoader = Multi30kDataLoader(
         dataset_name=DATASET_NAME,
-        tokenizer_en=TOKENIZER_EN,
-        tokenizer_de=TOKENIZER_DE,
+        de_tokenizer=DE_TOKENIZER,
+        en_tokenizer=EN_TOKENIZER,
         max_seq_len=MAX_SEQ_LEN,
         batch_size=BATCH_SIZE,
+        ddp=True,  # Enable DDP for DataLoader
+        cache_dir=os.path.join(".", "data", "multi30k")
     )
     train_loader, val_loader, test_loader = data_loader.load()
 
@@ -426,16 +426,16 @@ if __name__ == "__main__":
 
     # Instantiate Transformer Model and initialize parameters with correct device
     transformer: Transformer = Transformer(
-        encoder_vocab_size=data_loader.tokenizer_de.vocab_size,
-        decoder_vocab_size=data_loader.tokenizer_en.vocab_size,
+        encoder_vocab_size=data_loader.de_tokenizer.vocab_size,
+        decoder_vocab_size=data_loader.en_tokenizer.vocab_size,
         max_seq_len=MAX_SEQ_LEN,
         d_model=D_MODEL,
         num_heads=NUM_HEADS,
         d_ff=D_FF,
         num_layers=NUM_LAYERS,
         drop_prob=DROP_PROB,
-        src_pad_id=data_loader.tokenizer_de.pad_token_id,
-        trg_pad_id=data_loader.tokenizer_en.pad_token_id,
+        src_pad_id=data_loader.de_tokenizer.pad_token_id,
+        trg_pad_id=data_loader.en_tokenizer.pad_token_id,
         device=torch.device(rank),  # Use correct device for this rank
     )
 
@@ -465,7 +465,7 @@ if __name__ == "__main__":
                                                     factor=FACTOR,
                                                     patience=PATIENCE)
 
-    criterion: nn.CrossEntropyLoss = nn.CrossEntropyLoss(ignore_index=data_loader.tokenizer_en.pad_token_id).to(torch.device(rank))
+    criterion: nn.CrossEntropyLoss = nn.CrossEntropyLoss(ignore_index=data_loader.en_tokenizer.pad_token_id).to(torch.device(rank))
 
     # Start training
     train(
@@ -475,7 +475,7 @@ if __name__ == "__main__":
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        trg_tokenizer=data_loader.tokenizer_en,
+        trg_tokenizer=data_loader.en_tokenizer,
         rank=rank,
     )
 
