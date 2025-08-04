@@ -3,54 +3,59 @@ import datasets
 import torch
 import torch.distributed as dist
 from datasets import load_dataset
-from transformers import AutoTokenizer
 from torch.utils.data import DataLoader, TensorDataset, DistributedSampler
 from typing import Any, List, Tuple
+from src.utils.spacy_tokenizer import SpacyTokenizer
 
 
 class DataLoader4Multi30k:
     """Loader for Multi30k dataset"""
     def __init__(self: Any, dataset_name: str, tokenizer_en: str, tokenizer_de: str,
                     max_seq_len: int, batch_size: int, padding: str = "max_length",
-                    dataset_cache_dir: str = os.path.join(".", "data", "multi30k"),
-                    tokenizer_en_cache_dir: str = os.path.join(".", "data", "tokenizer_en"),
-                    tokenizer_de_cache_dir: str = os.path.join(".", "data", "tokenizer_de")) -> None:
+                    dataset_cache_dir: str = os.path.join(".", "data", "multi30k")) -> None:
         """constructor
         @param dataset_name: name of the dataset
-        @param tokenizer_en: English tokenizer
-        @param tokenizer_de: German tokenizer
+        @param tokenizer_en: English tokenizer model name
+        @param tokenizer_de: German tokenizer model name
         @param max_seq_len: maximum sequence length, which is used to pad the sequences
         @param batch_size: batch size for DataLoader
         @param device: device to use for the DataLoader
         """
         self.dataset: datasets.DatasetDict = load_dataset(dataset_name, cache_dir=dataset_cache_dir)
-        self.tokenizer_de: AutoTokenizer = AutoTokenizer.from_pretrained(tokenizer_de, cache_dir=tokenizer_de_cache_dir)
-        self.tokenizer_en: AutoTokenizer = AutoTokenizer.from_pretrained(tokenizer_en, cache_dir=tokenizer_en_cache_dir)
         self.max_seq_len: int = max_seq_len
         self.batch_size: int = batch_size
         self.padding: str = padding
+
+        self.tokenizer_de: SpacyTokenizer = SpacyTokenizer(tokenizer_de, max_seq_len)
+        self.tokenizer_en: SpacyTokenizer = SpacyTokenizer(tokenizer_en, max_seq_len)
+
+        # Build vocabularies from the dataset
+        de_texts = list(self.dataset["train"]["de"]) + list(self.dataset["validation"]["de"])
+        en_texts = list(self.dataset["train"]["en"]) + list(self.dataset["validation"]["en"])
+        self.tokenizer_de.build_vocabulary(de_texts)
+        self.tokenizer_en.build_vocabulary(en_texts)
 
     def _tokenize_de(self: Any, text: str) -> Any:
         """tokenize German text
         @param text: German text
         @return: tokenized text
         """
-        return self.tokenizer_de(text, padding=self.padding, truncation=True, max_length=self.max_seq_len)
+        return self.tokenizer_de.encode(text, padding=True, truncation=True, add_special_tokens=True)
 
     def _tokenize_en(self: Any, text: str) -> Any:
         """tokenize English text
         @param text: English text
         @return: tokenized text
         """
-        return self.tokenizer_en(text, padding=self.padding, truncation=True, max_length=self.max_seq_len)
+        return self.tokenizer_en.encode(text, padding=True, truncation=True, add_special_tokens=True)
 
     def _create_tensor_dataset(self: Any, src_data: Any, trg_data: Any) -> TensorDataset:
         """Create a TensorDataset from source and target data"""
         # Convert to tensors
-        src_inputs_ids: List[Any] = [item["input_ids"] for item in src_data]
-        trg_inputs_ids: List[Any] = [item["input_ids"] for item in trg_data]
-        src_tensor: torch.Tensor = torch.tensor(src_inputs_ids)
-        trg_tensor: torch.Tensor = torch.tensor(trg_inputs_ids)
+        # src_inputs_ids: List[Any] = [item["input_ids"] for item in src_data]
+        # trg_inputs_ids: List[Any] = [item["input_ids"] for item in trg_data]
+        src_tensor: torch.Tensor = torch.tensor(src_data)
+        trg_tensor: torch.Tensor = torch.tensor(trg_data)
         # Return TensorDataset
         return TensorDataset(src_tensor, trg_tensor)
 

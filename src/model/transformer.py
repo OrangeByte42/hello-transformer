@@ -10,7 +10,7 @@ class Transformer(nn.Module):
     """Transformer Model"""
     def __init__(self: Any, encoder_vocab_size: int, decoder_vocab_size: int, max_seq_len: int,
                     d_model: int, num_heads: int, d_ff: int, num_layers: int, drop_prob: float,
-                    src_pad_idx: int, trg_pad_idx: int ,device: torch.device) -> None:
+                    src_pad_id: int, trg_pad_id: int ,device: torch.device) -> None:
         """constructor
         @param encoder_vocab_size: size of the encoder vocabulary
         @param decoder_vocab_size: size of the decoder vocabulary
@@ -20,14 +20,14 @@ class Transformer(nn.Module):
         @param d_ff: dimension of the feed-forward network
         @param num_layers: number of layers in the encoder and decoder
         @param drop_prob: dropout probability
-        @param src_pad_idx: padding index for the source sequence
-        @param trg_pad_idx: padding index for the target sequence
+        @param src_pad_id: padding index for the source sequence
+        @param trg_pad_id: padding index for the target sequence
         @param device: device to use for the transformer
         """
         super(Transformer, self).__init__()
 
-        self.src_pad_idx: int = src_pad_idx
-        self.trg_pad_idx: int = trg_pad_idx
+        self.src_pad_id: int = src_pad_id
+        self.trg_pad_id: int = trg_pad_id
 
         self.device: torch.device = device
 
@@ -58,16 +58,16 @@ class Transformer(nn.Module):
     def _make_src_mask(self: Any, src_X: torch.Tensor) -> torch.Tensor:
         """create source mask
         @param src_X: source input tensor of shape (batch_size, seq_len)
-        @return: mask tensor of shape (batch_size, 1, seq_len, seq_len)
+        @return: mask tensor of shape (batch_size, 1, 1, seq_len)
         """
-        return (src_X != self.src_pad_idx).unsqueeze(1).unsqueeze(2)
+        return (src_X != self.src_pad_id).unsqueeze(1).unsqueeze(1)
 
-    def _make_cross_mask(self: Any, trg_X: torch.Tensor) -> torch.Tensor:
-        """create cross-attention mask
+    def _make_trg_mask(self: Any, trg_X: torch.Tensor) -> torch.Tensor:
+        """create target mask (combines padding mask and causal mask)
         @param trg_X: target input tensor of shape (batch_size, seq_len)
         @return: mask tensor of shape (batch_size, 1, seq_len, seq_len)
         """
-        trg_pad_mask: torch.Tensor = (trg_X != self.trg_pad_idx).unsqueeze(1).unsqueeze(3)
+        trg_pad_mask: torch.Tensor = (trg_X != self.trg_pad_id).unsqueeze(1).unsqueeze(1)
         trg_len: int = trg_X.shape[1]
         trg_sub_mask: torch.Tensor = torch.tril(torch.ones(trg_len, trg_len, device=trg_X.device, dtype=torch.bool))
         trg_mask: torch.Tensor = trg_pad_mask & trg_sub_mask
@@ -77,15 +77,16 @@ class Transformer(nn.Module):
         """apply transformer
         @param src_X: source input tensor of shape (batch_size, src_seq_len)
         @param trg_X: target input tensor of shape (batch_size, trg_seq_len)
-        @return: output tensor of shape (batch_size, trg_seq_len, d_model)
+        @return: output tensor of shape (batch_size, trg_seq_len, decoder_vocab_size)
         """
         src_mask: torch.Tensor = self._make_src_mask(src_X)
-        cross_mask: torch.Tensor = self._make_cross_mask(trg_X)
+        trg_mask: torch.Tensor = self._make_trg_mask(trg_X)
 
         encoder_output_X: torch.Tensor = self.encoder(src_X, src_mask)
-        decoder_output_X: torch.Tensor = self.decoder(trg_X, encoder_output_X, src_mask, cross_mask)
+        decoder_output_X: torch.Tensor = self.decoder(trg_X, encoder_output_X, src_mask, trg_mask)
 
         return decoder_output_X
+
 
 
 

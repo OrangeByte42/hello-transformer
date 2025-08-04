@@ -17,31 +17,37 @@ class DecoderLayer(nn.Module):
         @param drop_prob: dropout probability
         @return: None
         """
+
         super(DecoderLayer, self).__init__()
+
+        # Sublayer-01
         self.mha1: MultiHeadAttention = MultiHeadAttention(d_model=d_model, num_heads=num_heads)
         self.ln1: LayerNorm = LayerNorm(d_model=d_model)
         self.dropout1: nn.Dropout = nn.Dropout(p=drop_prob)
 
+        # Sublayer-02
         self.mha2: MultiHeadAttention = MultiHeadAttention(d_model=d_model, num_heads=num_heads)
         self.ln2: LayerNorm = LayerNorm(d_model=d_model)
         self.dropout2: nn.Dropout = nn.Dropout(p=drop_prob)
 
+        # Sublayer-03
         self.ffn: PositionWiseFeedForward = PositionWiseFeedForward(d_model=d_model, d_ff=d_ff, drop_prob=drop_prob)
         self.ln3: LayerNorm = LayerNorm(d_model=d_model)
         self.dropout3: nn.Dropout = nn.Dropout(p=drop_prob)
 
     def forward(self: Any, decoder_input_X: torch.Tensor, encoder_output_X: torch.Tensor,
-                src_mask: torch.Tensor, cross_mask: torch.Tensor) -> torch.Tensor:
+                src_mask: torch.Tensor, trg_mask: torch.Tensor) -> torch.Tensor:
         """apply decoder layer
         @param decoder_input_X: input tensor of shape (batch_size, seq_len, d_model)
         @param encoder_output_X: output tensor from the encoder of shape (batch_size, seq_len, d_model)
-        @param src_mask: mask tensor for the source sequence of shape (batch_size, 1, seq_len, seq_len)
-        @param cross_mask: mask tensor for the cross-attention of shape (batch_size, 1, seq_len, seq_len)
+        @param src_mask: mask tensor for the source sequence of shape (batch_size, 1, 1, seq_len)
+        @param trg_mask: mask tensor for the target sequence (self-attention) of shape (batch_size, 1, seq_len, seq_len)
         @return: output tensor of shape (batch_size, seq_len, d_model)
         """
+
         # Compute self-attention
         residual_X: torch.Tensor = decoder_input_X
-        X: torch.Tensor = self.mha1(Q=decoder_input_X, K=decoder_input_X, V=decoder_input_X, mask=cross_mask)
+        X: torch.Tensor = self.mha1(Q=decoder_input_X, K=decoder_input_X, V=decoder_input_X, mask=trg_mask)
         # Compute add & norm
         X = self.dropout1(X)
         X = self.ln1(X + residual_X)

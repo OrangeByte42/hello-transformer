@@ -1,33 +1,36 @@
 import torch
 
-
-# Device configuration - Remove hardcoded device, let DDP handle device assignment
-# DEVICE: torch.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 # Dataset configuration
 DATASET_NAME: str = "bentrevett/multi30k"
-TOKENIZER_EN: str = "google-bert/bert-base-uncased"
-TOKENIZER_DE: str = "google-bert/bert-base-german-dbmdz-cased"
+TOKENIZER_EN: str = "en_core_web_sm"
+TOKENIZER_DE: str = "de_core_news_sm"
+BATCH_SIZE: int = 16
 MAX_SEQ_LEN: int = 256
 
-# Model configuration
-BATCH_SIZE: int = 16
+
+# Model architecture configuration
 NUM_LAYERS: int = 6
 D_MODEL: int = 512
 NUM_HEADS: int = 8
 D_FF: int = 2048
 
-# Training configuration - Match reference implementation closely
-DROP_PROB: float = 0.1  # Back to reference value
-INIT_LR: float = 1e-5  # Match reference exactly
+DROP_PROB: float = 0.2  # Reference uses 0.1, not 0.3
+
+
+# Training configuration - Match reference implementation exactly
+INIT_LR: float = 1e-4  # Reference uses 1e-4, not 1e-5
 FACTOR: float = 0.9  # Match reference exactly
 ADAM_EPS: float = 5e-9
-PATIENCE: int = 10  # Match reference exactly
-WARMUP: int = 100  # Match reference exactly (much longer warmup)
-EPOCHS_NUM: int = 1_000
+PATIENCE: int = 5  # Match reference exactly
+WARMUP: int = 10  # Reference uses 100 epochs warmup
+EPOCHS_NUM: int = 100  # Reference uses more epochs
 CLIP: float = 1.0
-WEIGHT_DECAY: float = 5e-4  # Match reference exactly
+WEIGHT_DECAY: float = 5e-4  # Reference uses 5e-4
 INF: float = float("inf")
+
+
+
+
 
 
 

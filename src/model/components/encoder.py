@@ -41,7 +41,7 @@ class Encoder(nn.Module):
     def forward(self: Any, X: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """apply encoder
         @param X: input tensor of shape (batch_size, seq_len)
-        @param mask: mask tensor of shape (batch_size, 1, seq_len, seq_len)
+        @param mask: mask tensor of shape (batch_size, 1, 1, seq_len)
         @return: output tensor of shape (batch_size, seq_len, d_model)
         """
         X = self.embedding(X)

@@ -40,17 +40,17 @@ class Decoder(nn.Module):
         self.to(device)     # Move entire decoder to device
 
     def forward(self: Any, decoder_input_X: torch.Tensor, encoder_output_X: torch.Tensor,
-                src_mask: torch.Tensor, cross_mask: torch.Tensor) -> torch.Tensor:
+                src_mask: torch.Tensor, trg_mask: torch.Tensor) -> torch.Tensor:
         """apply decoder
         @param decoder_input_X: input tensor of shape (batch_size, seq_len)
         @param encoder_output_X: output tensor from the encoder of shape (batch_size, seq_len, d_model)
-        @param src_mask: mask tensor for the source sequence of shape (batch_size, 1, seq_len, seq_len)
-        @param cross_mask: mask tensor for the cross-attention of shape (batch_size, 1, seq_len, seq_len)
-        @return: output tensor of shape (batch_size, seq_len, d_model)
+        @param src_mask: mask tensor for the source sequence of shape (batch_size, 1, 1, seq_len)
+        @param trg_mask: mask tensor for the target sequence of shape (batch_size, 1, seq_len, seq_len)
+        @return: output tensor of shape (batch_size, seq_len, decoder_vocab_size)
         """
         X = self.embedding(decoder_input_X)
         for layer in self.layers:
-            X = layer(X, encoder_output_X, src_mask, cross_mask)
+            X = layer(X, encoder_output_X, src_mask, trg_mask)
         output: torch.Tensor = self.fc(X)
         return output
 
