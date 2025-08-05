@@ -30,7 +30,7 @@ class BLEUSccoreEvaluator:
         """Calculate BLEU score for a corpus of hypotheses against multiple references
         @param hypothesis_corpus: List of hypotheses, each hypothesis is a list of tokens
         @param references_corpus: List of references, each reference is a list of lists of tokens (multiple references per hypothesis)
-        @return: BLEU score (0-100)
+        @return: BLEU score whose range is [0, 100]
         """
         assert len(hypothesis_corpus) == len(references_corpus), "Hypotheses and references must have the same length."
 
@@ -93,7 +93,7 @@ class BLEUSccoreEvaluator:
                 non_zero_precisions = True
 
         if non_zero_precisions == False: return 0.0
-        geometric_mean: float = math.exp(log_precisions_sum)
+        geometric_mean: float = math.exp(log_precisions_sum)    # for log-sum, avoid underflow
 
         # Calculate brevity penalty
         brevity_penalty: float = 1.0

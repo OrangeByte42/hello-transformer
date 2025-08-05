@@ -22,18 +22,22 @@ class ScaledDotProductAttention(nn.Module):
         @param mask: optional mask tensor of shape (batch_size, 1, seq_len_q, seq_len_k)
         @return: output tensor of shape (batch_size, num_heads, seq_len_q, d_v) and attention weights of shape (batch_size, num_heads, seq_len_q, seq_len_k)
         """
+
         # Compute the attention scores
         d_k: int = Q.shape[-1]
         attention_scores: torch.Tensor = Q @ K.transpose(-2, -1) / math.sqrt(d_k)
+
         # Apply the mask if provided
         if mask is not None:
-            # attention_scores = attention_scores.masked_fill(mask == 0, float('-inf'))
             neg_inf: float = torch.finfo(attention_scores.dtype).min
             attention_scores = attention_scores.masked_fill(mask == 0, neg_inf)
+
         # Compute the attention weights
         attention_weights: torch.Tensor = self.softmax(attention_scores)
+
         # Compute the output
         output: torch.Tensor = attention_weights @ V
+
         # Return the output and attention weights
         return output, attention_weights
 
@@ -74,7 +78,8 @@ class MultiHeadAttention(nn.Module):
         output: torch.Tensor = X.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
         return output
 
-    def forward(self: Any, Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor, mask: Union[torch.Tensor, None] = None) -> torch.Tensor:
+    def forward(self: Any, Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor,
+                mask: Union[torch.Tensor, None] = None) -> torch.Tensor:
         """compute multi-head attention
         @param Q: query tensor of shape (batch_size, seq_len_q, d_model)
         @param K: key tensor of shape (batch_size, seq_len_k, d_model)
@@ -93,7 +98,4 @@ class MultiHeadAttention(nn.Module):
         output = self.W_o(output)
         # Return the output tensor
         return output
-
-
-
 

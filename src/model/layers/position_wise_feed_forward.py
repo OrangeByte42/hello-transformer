@@ -15,9 +15,9 @@ class PositionWiseFeedForward(nn.Module):
         super(PositionWiseFeedForward, self).__init__()
 
         self.fc1: nn.Linear = nn.Linear(d_model, d_ff)
-        self.fc2: nn.Linear = nn.Linear(d_ff, d_model)
         self.relu: nn.ReLU = nn.ReLU()
         self.dropout: nn.Dropout = nn.Dropout(p=drop_prob)
+        self.fc2: nn.Linear = nn.Linear(d_ff, d_model)
 
     def forward(self: Any, X: torch.Tensor) -> torch.Tensor:
         """apply position-wise feed-forward network
@@ -29,6 +29,4 @@ class PositionWiseFeedForward(nn.Module):
         X = self.dropout(X)
         X = self.fc2(X)
         return X
-
-
 

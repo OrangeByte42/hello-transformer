@@ -27,5 +27,3 @@ class LayerNorm(nn.Module):
         output = self.gamma * output + self.beta
         return output
 
-
-

@@ -6,13 +6,14 @@ from typing import Any
 
 class TokenEmbedding(nn.Embedding):
     """token embedding layer"""
-    def __init__(self: Any, vocab_size: int, d_model: int) -> None:
+    def __init__(self: Any, vocab_size: int, padding_idx: int, d_model: int) -> None:
         """constructor
         @param vocab_size: size of the vocabulary
         @param d_model: dimension of the model
+        @param padding_idx: index of the padding token which decided by tokenizer
         @return: None
         """
-        super(TokenEmbedding, self).__init__(vocab_size, d_model, padding_idx=1)
+        super(TokenEmbedding, self).__init__(vocab_size, d_model, padding_idx=padding_idx)
 
 
 class PositionalEncoding(nn.Module):
@@ -49,17 +50,19 @@ class PositionalEncoding(nn.Module):
 
 class TransformerEmbedding(nn.Module):
     """token embedding & positional encoding layer"""
-    def __init__(self: Any, vocab_size: int, d_model: int, max_seq_len: int, drop_prob: float, device: torch.device) -> None:
+    def __init__(self: Any, vocab_size: int, max_seq_len: int, padding_idx: int,
+                    d_model: int, drop_prob: float, device: torch.device) -> None:
         """constructor
         @param vocab_size: size of the vocabulary
         @param d_model: dimension of the model
         @param max_seq_len: maximum sequence length
+        @param padding_idx: index of the padding token which decided by tokenizer
         @param drop_prob: dropout probability
         @param device: device to use for the embedding
         @return: None
         """
         super(TransformerEmbedding, self).__init__()
-        self.token_embedding: TokenEmbedding = TokenEmbedding(vocab_size=vocab_size, d_model=d_model)
+        self.token_embedding: TokenEmbedding = TokenEmbedding(vocab_size=vocab_size, padding_idx=padding_idx, d_model=d_model)
         self.positional_encoding: PositionalEncoding = PositionalEncoding(d_model=d_model, max_seq_len=max_seq_len, device=device)
         self.dropout: nn.Dropout = nn.Dropout(p=drop_prob)
         self.device: torch.device = device
@@ -77,8 +80,4 @@ class TransformerEmbedding(nn.Module):
         token_embedded: torch.Tensor = self.token_embedding(X) * math.sqrt(self.token_embedding.embedding_dim)
         pos_encoded: torch.Tensor = self.positional_encoding(token_embedded)
         return self.dropout(token_embedded + pos_encoded)
-
-
-
-
 

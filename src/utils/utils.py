@@ -1,6 +1,6 @@
 import torch
-import torch.distributed as dist
 from torch import nn
+import torch.distributed as dist
 from typing import Tuple
 
 
@@ -28,7 +28,4 @@ def cleanup() -> None:
     """Cleanup distributed training environment."""
     dist.destroy_process_group()    # Destroy the process group to clean up resources
     torch.cuda.empty_cache()    # Clear the CUDA memory cache
-
-
-
 

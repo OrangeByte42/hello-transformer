@@ -17,7 +17,6 @@ class EncoderLayer(nn.Module):
         @param drop_prob: dropout probability
         @return: None
         """
-
         super(EncoderLayer, self).__init__()
 
         # Sublayer-01
@@ -53,6 +52,4 @@ class EncoderLayer(nn.Module):
 
         # Return the output
         return X
-
-
 

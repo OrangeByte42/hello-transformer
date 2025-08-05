@@ -16,14 +16,14 @@ D_MODEL: int = 512
 NUM_HEADS: int = 8
 D_FF: int = 2048
 
-DROP_PROB: float = 0.2  # Reference uses 0.1, not 0.3
+DROP_PROB: float = 0.3 # Reference uses 0.1, not 0.3
 
 
 # Training configuration - Match reference implementation exactly
-INIT_LR: float = 5e-4  # Reference uses 1e-4, not 1e-5
+INIT_LR: float = 1e-4  # Reference uses 1e-4, not 1e-5
 FACTOR: float = 0.9  # Match reference exactly
 ADAM_EPS: float = 5e-9
-PATIENCE: int = 5  # Match reference exactly
+PATIENCE: int = 10  # Match reference exactly
 WARMUP: int = 20  # Reference uses 100 epochs warmup
 EPOCHS_NUM: int = 100  # Reference uses more epochs
 CLIP: float = 1.0

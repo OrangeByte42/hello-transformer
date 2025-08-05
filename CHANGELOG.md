@@ -1,5 +1,9 @@
 # 1.1
 
+- v1.1.3 bug fix & support DDP & code refactoring;
+- v1.1.2 bug fix;
+- v1.1.1 Transformer implementation initially;
+
 ## Added
 
 **v1.1.3**:
@@ -27,14 +31,11 @@
 
 **v1.1.3**:
 - v1.1.3 use auto-regressive for evaluating;
-- v1.1.3 fix bleu;
+- v1.1.3 fixed bleu;
+- v1.1.3 fixed token embedding to use specific padding_idx which decided by tokenizer;
 
 **v1.1.2**:
 - v1.1.2 replace 1e-9 by 'torch.finfo(attention_scores.dtype).min' to build mask;
 - v1.1.2 use 'skip_special_tokens=True' in tokenizer.decode for better code;
-- v1.1.2 fix echo logic in train.py, align info and only show some info in rank 0 process;
-
-
-
-
+- v1.1.2 fixed echo logic in train.py, align info and only show some info in rank 0 process;
 

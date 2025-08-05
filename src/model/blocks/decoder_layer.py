@@ -17,7 +17,6 @@ class DecoderLayer(nn.Module):
         @param drop_prob: dropout probability
         @return: None
         """
-
         super(DecoderLayer, self).__init__()
 
         # Sublayer-01
@@ -68,5 +67,4 @@ class DecoderLayer(nn.Module):
 
         # Return the output
         return X
-
 
