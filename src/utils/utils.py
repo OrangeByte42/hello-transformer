@@ -1,3 +1,4 @@
+import os
 import torch
 from torch import nn
 import torch.distributed as dist
@@ -28,4 +29,14 @@ def cleanup() -> None:
     """Cleanup distributed training environment."""
     dist.destroy_process_group()    # Destroy the process group to clean up resources
     torch.cuda.empty_cache()    # Clear the CUDA memory cache
+
+def save_list(save_dir: str, file_name: str, list_data: list) -> None:
+    """Save a list to a text file, one item per line.
+    @param save_dir: Directory to save the file
+    @param file_name: Name of the file
+    @param list_data: List of items to save
+    """
+    save_path: str = os.path.join(save_dir, file_name)
+    with open(save_path, 'w', encoding='utf-8') as f:
+        f.write(str(list_data))
 

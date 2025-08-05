@@ -75,6 +75,17 @@ class Tokenizer(ABC):
         """Build vocabulary from a list of texts"""
         ...
 
+
+    @abstractmethod
+    def convert_ids_to_tokens(self: Any, ids: List[int], skip_special_tokens: bool) -> List[str]:
+        """Convert a list of token IDs to tokens"""
+        ...
+
+    @abstractmethod
+    def convert_tokens_to_ids(self: Any, tokens: List[str], skip_special_tokens: bool) -> List[int]:
+        """Convert a list of tokens to token IDs"""
+        ...
+
     @abstractmethod
     def encode(self: Any, text: str, add_special_tokens: bool = True, padding: bool = True,
                 truncation: bool = True) -> List[int]:

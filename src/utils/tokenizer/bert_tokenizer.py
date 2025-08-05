@@ -71,6 +71,26 @@ class BertTokenizer(Tokenizer):
                 continue
             self.tokenizer.add_tokens([token])
 
+    def convert_ids_to_tokens(self: Any, ids: List[int], skip_special_tokens: bool) -> List[str]:
+        """Convert a list of token IDs to tokens
+        @param ids: List of token IDs
+        @param skip_special_tokens: Whether to skip special tokens
+        @return: List of tokens
+        """
+        tokens: List[str] = self.tokenizer.convert_ids_to_tokens(ids, skip_special_tokens=skip_special_tokens)
+        return tokens
+
+    def convert_tokens_to_ids(self: Any, tokens: List[str], skip_special_tokens: bool) -> List[int]:
+        """Convert a list of tokens to token IDs
+        @param tokens: List of tokens
+        @param skip_special_tokens: Whether to skip special tokens
+        @return: List of token IDs
+        """
+        if skip_special_tokens:
+            tokens = [token for token in tokens if token not in self.special_tokens]
+        token_ids: List[int] = self.tokenizer.convert_tokens_to_ids(tokens)
+        return token_ids
+
     def encode(self: Any, text: str, add_special_tokens: bool = True, padding: bool = True,
                 truncation: bool = True) -> List[int]:
         """Encode a text string into a list of token IDs

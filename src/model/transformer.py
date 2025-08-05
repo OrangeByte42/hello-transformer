@@ -59,15 +59,21 @@ class Transformer(nn.Module):
 
         self.to(device)     # Move entire transformer to device
 
-    def _make_src_mask(self: Any, src_X: torch.Tensor) -> torch.Tensor:
+    def make_src_mask(self: Any, src_X: torch.Tensor) -> torch.Tensor:
         """create source mask
         @param src_X: source input tensor of shape (batch_size, seq_len)
         @return: mask tensor of shape (batch_size, 1, 1, seq_len), shape[1] == 1 for mha_heads broadcast
         """
         # Only padding mask which aims to ignore the padding tokens in the source sequence
-        return (src_X != self.src_pad_id).unsqueeze(1).unsqueeze(1)
+        src_mask: torch.Tensor = (src_X != self.src_pad_id).unsqueeze(1).unsqueeze(1)
 
-    def _make_trg_mask(self: Any, trg_X: torch.Tensor) -> torch.Tensor:
+        # Move to device
+        src_mask = src_mask.to(self.device)
+
+        # Return the mask
+        return src_mask
+
+    def make_trg_mask(self: Any, trg_X: torch.Tensor) -> torch.Tensor:
         """create target mask (combines padding mask and causal mask)
         @param trg_X: target input tensor of shape (batch_size, seq_len)
         @return: mask tensor of shape (batch_size, 1, seq_len, seq_len), shape[1] == 1 for mha_heads broadcast
@@ -80,7 +86,10 @@ class Transformer(nn.Module):
         trg_sub_mask: torch.Tensor = torch.tril(torch.ones(trg_len, trg_len, device=trg_X.device, dtype=torch.bool))
 
         # Combine masks
-        trg_mask: torch.Tensor = trg_pad_mask & trg_sub_mask
+        trg_mask: torch.Tensor = (trg_pad_mask & trg_sub_mask)
+
+        # Move to device
+        trg_mask = trg_mask.to(self.device)
 
         # Return the mask
         return trg_mask
@@ -92,8 +101,8 @@ class Transformer(nn.Module):
         @return: output tensor of shape (batch_size, trg_seq_len, decoder_vocab_size)
         """
         # Create masks
-        src_mask: torch.Tensor = self._make_src_mask(src_X)
-        trg_mask: torch.Tensor = self._make_trg_mask(trg_X)
+        src_mask: torch.Tensor = self.make_src_mask(src_X)
+        trg_mask: torch.Tensor = self.make_trg_mask(trg_X)
 
         # Pass through encoder and decoder
         encoder_output_X: torch.Tensor = self.encoder(src_X, src_mask)
@@ -101,4 +110,15 @@ class Transformer(nn.Module):
 
         # Return the output
         return decoder_output_X
+
+    def init_weights(self: Any) -> None:
+        """Initialize weights of the transformer model"""
+        # Define a function to initialize weights
+        def _init_weights(m: nn.Module) -> None:
+            """Initialize weights for a module"""
+            if hasattr(m, 'weight') and m.weight.dim() > 1:
+                nn.init.kaiming_uniform_(m.weight.data)
+
+        # Apply the initialization function to all modules in the transformer
+        self.apply(_init_weights)
 

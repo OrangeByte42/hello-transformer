@@ -4,7 +4,7 @@ from collections import Counter
 from typing import Any, List, Tuple, Dict
 
 
-class BLEUSccoreEvaluator:
+class BLEUScoreEvaluator:
     """Evaluartor for BLEU score calculation"""
 
     def __init__(self: Any, max_n_gram: int = 4, smoothing: bool = False) -> None:
@@ -26,7 +26,7 @@ class BLEUSccoreEvaluator:
             ngrams_stats[n] = Counter(ngrams)
         return ngrams_stats
 
-    def calculate_bleu(self: Any, hypothesis_corpus: List[List[str]], references_corpus: List[List[List[str]]]) -> float:
+    def evaluate(self: Any, hypothesis_corpus: List[List[str]], references_corpus: List[List[List[str]]]) -> float:
         """Calculate BLEU score for a corpus of hypotheses against multiple references
         @param hypothesis_corpus: List of hypotheses, each hypothesis is a list of tokens
         @param references_corpus: List of references, each reference is a list of lists of tokens (multiple references per hypothesis)

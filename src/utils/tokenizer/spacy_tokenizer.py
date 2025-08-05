@@ -75,6 +75,44 @@ class SpacyTokenizer(Tokenizer):
             self.vocab[token] = token_id
             self.id2token[token_id] = token
 
+    def convert_ids_to_tokens(self: Any, ids: List[int], skip_special_tokens: bool) -> List[str]:
+        """Convert a list of token IDs to tokens
+        @param ids: List of token IDs to convert
+        @param skip_special_tokens: Whether to skip special tokens in the output
+        @return: List of tokens corresponding to the input IDs
+        """
+        # Initialize list to hold tokens
+        tokens: List[str] = list()
+
+        # Convert each ID to its corresponding token
+        for token_id in ids:
+            token: str = self.id2token.get(token_id, self._unk_token)
+            if skip_special_tokens == True and token in self.special_tokens:
+                continue
+            tokens.append(token)
+
+        # Return list of tokens
+        return tokens
+
+    def convert_tokens_to_ids(self: Any, tokens: List[str], skip_speicial_tokens: bool) -> List[int]:
+        """Convert a list of tokens to token IDs
+        @param tokens: List of tokens to convert
+        @param skip_special_tokens: Whether to skip special tokens in the input
+        @return: List of token IDs corresponding to the input tokens
+        """
+        # Initialize list to hold token IDs
+        token_ids: List[int] = list()
+
+        # Convert each token to its corresponding ID
+        for token in tokens:
+            if skip_speicial_tokens == True and token in self.special_tokens:
+                continue
+            token_id: int = self.vocab.get(token, self._unk_token_id)
+            token_ids.append(token_id)
+
+        # Return list of token IDs
+        return token_ids
+
     def encode(self: Any, text: str, add_special_tokens: bool = True, padding: bool = True,
                 truncation: bool = True) -> List[int]:
         """Encode a text string into a list of token IDs
