@@ -1,9 +1,8 @@
 .venv/
 .vscode/
 
-data/*
-checkpoints/*
-out/*
-
 **/__pycache__
-output.log
+
+data
+outs
+logs

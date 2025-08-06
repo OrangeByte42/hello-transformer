@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from typing import Any
 
-from src.model.components.encoder import Encoder
-from src.model.components.decoder import Decoder
+from src.models.components.encoder import Encoder
+from src.models.components.decoder import Decoder
 
 
 class Transformer(nn.Module):

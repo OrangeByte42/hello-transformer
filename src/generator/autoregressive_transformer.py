@@ -1,8 +1,8 @@
 import torch
 from typing import Any
 
-from src.utils.tokenizer.tokenizer import Tokenizer
-from src.model.transformer import Transformer
+from src.data.tokenizer.tokenizer import Tokenizer
+from src.models.transformer import Transformer
 
 
 class AutoregressiveTransformer:

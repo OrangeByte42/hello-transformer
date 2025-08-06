@@ -2,9 +2,9 @@ import torch
 from torch import nn
 from typing import Any
 
-from src.model.layers.layernorm import LayerNorm
-from src.model.layers.multihead_attention import MultiHeadAttention
-from src.model.layers.position_wise_feed_forward import PositionWiseFeedForward
+from src.models.layers.layernorm import LayerNorm
+from src.models.layers.multihead_attention import MultiHeadAttention
+from src.models.layers.position_wise_feed_forward import PositionWiseFeedForward
 
 
 class DecoderLayer(nn.Module):

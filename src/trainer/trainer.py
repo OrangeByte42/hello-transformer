@@ -1,19 +1,21 @@
 import os
+import time
 import datetime
+import math
 import torch
 from torch import nn
 from torch import distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from typing import Any, Optional, Tuple, List
+from typing import Any, Optional, Tuple, List, Dict, Union
 
-from src.config.config import DatasetConfig, ModelConfig, TrainConfig
-from src.utils.dataloader.multi30k_loader import Multi30kDataLoader
-from src.utils.tokenizer.tokenizer import Tokenizer
-from src.model.transformer import Transformer
+from src.configs import DatasetConfig, ModelConfig, TrainConfig, SaveConfig
+from src.data.dataloader.multi30k_loader import Multi30kDataLoader
+from src.data.tokenizer.tokenizer import Tokenizer
+from src.models.transformer import Transformer
 from src.generator.autoregressive_transformer import AutoregressiveTransformer
-from src.utils.evaluator.bleu import BLEUScoreEvaluator
-from src.utils.utils import save_list, cleanup
+from src.data.evaluator.bleu import BLEUScoreEvaluator
+from src.utils.utils import save_obj_by_pickle, cleanup, count_parameters, epoch_time
 
 
 class Trainer:
@@ -23,17 +25,20 @@ class Trainer:
                     dataset_config: DatasetConfig,
                     model_config: ModelConfig,
                     train_config: TrainConfig,
+                    save_config: SaveConfig,
                     ddp: bool) -> None:
-        """Initialize the Trainer with dataset, model and training configurations.
+        """Initialize the Trainer with configurations.
         @param dataset_config: Configuration for dataset parameters.
         @param model_config: Configuration for model architecture.
         @param train_config: Configuration for training parameters.
+        @param save_config: Configuration for saving checkpoints and logs.
         @param ddp: Flag to indicate if Distributed Data Parallel (DDP) training is enabled.
         """
         # Configurations
         self.dataset_config: DatasetConfig = dataset_config
         self.model_config: ModelConfig = model_config
         self.train_config: TrainConfig = train_config
+        self.save_config: SaveConfig = save_config
 
         # DataLoader & Model
         self.data_loader: Optional[Multi30kDataLoader] = None
@@ -53,6 +58,10 @@ class Trainer:
         self.valid_losses: List[float] = list()
         self.valid_bleu_scores: List[float] = list()
 
+        self.sample_batch_num: int = self.save_config.SAVE_SAMPLE_BATCH_NUM
+        # List of {"ref": str, "hyp": List[str]}, x[i]["hyp"][j] is the i-th sample's j-th hypothesis after j-th training epoch
+        self.sample_trace: List[Dict[str, Union[str, List[str]]]] = list()
+
     def _init_dataloader(self: Any) -> Multi30kDataLoader:
         """Initialize the data loader for the Multi30k dataset.
         @return: An instance of Multi30kDataLoader.
@@ -65,11 +74,22 @@ class Trainer:
             max_seq_len=self.dataset_config.MAX_SEQ_LEN,
             batch_size=self.dataset_config.BATCH_SIZE,
             ddp=self.ddp,
-            cache_dir=self.dataset_config.CACHE_DIR,
+            dataset_cache_dir=self.dataset_config.DATASET_CACHE_DIR,
+            tokenizer_cache_dir=self.dataset_config.TOKENIZER_CACHE_DIR,
         )
 
         # Set the data loader to the instance variable
         self.data_loader = data_loader
+
+        # Echo the dataset information
+        if not self.ddp or (self.ddp and dist.is_initialized() and dist.get_rank() == 0):
+            print(f"[Initializing DataLoader]:")
+            print(f"\t- Initialized DataLoader for {self.dataset_config.DATASET_NAME} dataset.")
+            print(f"\t- Using {self.dataset_config.DE_TOKENIZER} for German and {self.dataset_config.EN_TOKENIZER} for English.")
+            print(f"\t- Batch size: {self.dataset_config.BATCH_SIZE}, Max sequence length: {self.dataset_config.MAX_SEQ_LEN}")
+            print(f"\t- En tokenizer vocabulary size: {data_loader.en_tokenizer.vocab_size}")
+            print(f"\t- De tokenizer vocabulary size: {data_loader.de_tokenizer.vocab_size}")
+            print(f"\tDataLoader initialized successfully.", end="\n\n")
 
         # Return the initialized data loader
         return data_loader
@@ -102,6 +122,14 @@ class Trainer:
 
         # Set the model to the instance variable
         self.model = transformer
+
+        # Echo the model parameters
+        if not self.ddp or (self.ddp and dist.is_initialized() and dist.get_rank() == 0):
+            total_params, trainable_params = count_parameters(transformer, self.ddp)
+            print(f"[Instantiating Model]:")
+            print(f"\t- Model Parameters:     {total_params:,} ({total_params / 1e9:.4f} B)")
+            print(f"\t- Trainable Parameters: {trainable_params:,} ({trainable_params / 1e9:.4f} B)")
+            print(f"\tInstantiated Transformer model successfully.", end="\n\n")
 
         # Return the initialized model
         return transformer
@@ -204,6 +232,7 @@ class Trainer:
         @param evaluator: BLEU score evaluator for validation.
         @param device: The device (CPU or GPU) to run the validation on.
         @param ddp: Flag to indicate if Distributed Data Parallel (DDP) validation is enabled.
+        @return: Tuple of (average validation loss, BLEU score).
         """
         # Set the model to evaluation mode and create necessary variables
         model.eval()
@@ -214,9 +243,11 @@ class Trainer:
         all_ref_corpus: List[List[List[str]]] = list()  # shape: [batch_size, num_refs, seq_len]
         all_hyp_corpus: List[List[str]] = list()  # shape: [batch_size, seq_len]
 
+        saved_sample_count: int = 0
+
         # Iterate over the validation data loader
         with torch.no_grad():
-            for batch in valid_iter:
+            for batch_idx, batch in enumerate(valid_iter):
                 # Part 01. Get Loss
                 # Get batch data and move to device
                 src_X, trg_X = batch
@@ -238,14 +269,31 @@ class Trainer:
 
                 # Decode tokens to words and collect for BLEU calculation
                 batch_size: int = src_X.shape[0]
-                for idx in range(batch_size):   # Iterate over samples in the current batch
+                for sample_idx in range(batch_size):   # Iterate over samples in the current batch
                     # Get the current reference and hypothesis sequences
-                    trg_token_ids: List[int] = trg_X[idx, :].cpu().numpy().tolist()
-                    pred_token_ids: List[int] = generated_seqs[idx, :].cpu().numpy().tolist()
+                    trg_token_ids: List[int] = trg_X[sample_idx, :].cpu().numpy().tolist()
+                    pred_token_ids: List[int] = generated_seqs[sample_idx, :].cpu().numpy().tolist()
 
                     # Decode the reference and hypothesis sequences to words
                     all_ref_corpus.append([trg_tokenizer.convert_ids_to_tokens(trg_token_ids, skip_special_tokens=True)])
                     all_hyp_corpus.append(trg_tokenizer.convert_ids_to_tokens(pred_token_ids, skip_special_tokens=True))
+
+                    # Record sample traces for analysis
+                    if batch_idx < self.sample_batch_num:
+                        # Decode the reference and hypothesis sequences to text
+                        trg_text: str = trg_tokenizer.decode(trg_token_ids, skip_special_tokens=True)
+                        pred_text: str = trg_tokenizer.decode(pred_token_ids, skip_special_tokens=True)
+
+                        # Save the sample trace
+                        if len(self.sample_trace) <= saved_sample_count:
+                            self.sample_trace.append({
+                                "ref": trg_text,
+                                "hyp": [pred_text],
+                            })
+                        else:
+                            assert self.sample_trace[saved_sample_count]["ref"] == trg_text, "Sample trace reference mismatch"
+                            self.sample_trace[saved_sample_count]["hyp"].append(pred_text)
+                        saved_sample_count += 1
 
         # Part 01. Calculate the average validation loss across all processes
         # Convert validation loss and batch count to tensor
@@ -274,7 +322,7 @@ class Trainer:
 
         # Calculate the global BLEU score
         global_bleu_score: float = 0.0
-        if ddp == False or (ddp == True and dist.get_rank() == 0):
+        if not ddp or (ddp and dist.is_initialized() and dist.get_rank() == 0):
             # Flatten the gathered corpora
             flat_ref_corpus: List[List[List[str]]] = [item for sublist in gathered_ref_corpus for item in sublist]
             flat_hyp_corpus: List[List[str]] = [item for sublist in gathered_hyp_corpus for item in sublist]
@@ -291,6 +339,7 @@ class Trainer:
             dist.broadcast(bleu_tensor, src=0)
             global_bleu_score = bleu_tensor.item()
 
+        # Return the average validation loss and BLEU score
         return global_avg_loss, global_bleu_score
 
     def _train(self: Any, model: Transformer, trg_tokenizer: Tokenizer,
@@ -316,7 +365,7 @@ class Trainer:
 
         # Get actual model (unwrap DDP if necessary)
         actual_model: Optional[Transformer] = None
-        if ddp == True and isinstance(model, nn.parallel.DistributedDataParallel):
+        if ddp == True and isinstance(model, DDP):
             actual_model = model.module
         else:
             actual_model = model
@@ -330,13 +379,24 @@ class Trainer:
         # Training loop
         for epoch in range(epochs_num):
             # Train for one epoch
+            start_time: float = time.time()
             if ddp == True: train_iter.sampler.set_epoch(epoch)
             train_loss: float = self._epoch_train(model, train_iter, optimizer, criterion, clip, device, ddp)
             valid_loss, valid_bleu = self._epoch_validate(model, generator, valid_iter, criterion, max_seq_len,
                                                             trg_tokenizer, evaluator, device, ddp)
+            end_time: float = time.time()
 
             # Step the scheduler
             if epoch > warmup: scheduler.step(valid_loss)
+
+            # Echo the training and validation results
+            if ddp == False or (ddp == True and dist.get_rank() == 0):
+                elapsed_mins, elapsed_secs = epoch_time(start_time, end_time)
+                print(f"[Training Trace] >>> "
+                        f"Epoch:: {epoch + 1:0>{len(str(epochs_num))}}/{epochs_num}, {elapsed_mins:0>2}m {elapsed_secs:0>2}s :: "
+                        f"Train Loss: {train_loss:<8.4f}, Train PPL: {math.exp(train_loss):<8.4f} | ",
+                        f"Valid Loss: {valid_loss:<8.4f}, Valid PPL: {math.exp(valid_loss):<8.4f} | "
+                        f"Valid BLEU: {valid_bleu:<8.4f} |")
 
             # Record the losses and BLEU scores
             self.train_losses.append(train_loss)
@@ -349,18 +409,10 @@ class Trainer:
                 if valid_bleu > self.best_bleu:
                     self.best_bleu = valid_bleu
 
-                    save_dir: str = os.path.join(".", "checkpoints")
+                    save_dir: str = self.save_config.CHECKPOINT_DIR
                     os.makedirs(save_dir, exist_ok=True)
 
-                    torch.save(actual_model.state_dict(), os.path.join(save_dir, f"epoch-{epoch:0>{len(str(epochs_num))}}-valid_loss-{valid_loss:.4f}-bleu-{valid_bleu:.4f}.pt"))
-
-                # Save training trace info
-                save_dir: str = os.path.join(".", "out")
-                os.makedirs(save_dir, exist_ok=True)
-
-                save_list(save_dir, "train_losses.txt", self.train_losses)
-                save_list(save_dir, "valid_losses.txt", self.valid_losses)
-                save_list(save_dir, "valid_bleu_scores.txt", self.valid_bleu_scores)
+                    torch.save(actual_model.state_dict(), os.path.join(save_dir, f"epoch-{epoch:0>{len(str(epochs_num))}}-valid_loss-{valid_loss:0>7.4f}-bleu-{valid_bleu:0>7.4f}.pt"))
 
             if ddp == True: dist.barrier()
 
@@ -376,9 +428,9 @@ class Trainer:
         local_rank: int = int(os.environ["LOCAL_RANK"])     # Local rank of the current process on the node
 
         torch.backends.cudnn.benchmark = True   # Enable cuDNN benchmark for performance
-        torch.cuda.set_device(local_rank)   # Set device for the current process
-        dist.init_process_group(backend="nccl", world_size=world_size, init_method="env://",
+        dist.init_process_group(backend="nccl", init_method="env://", world_size=world_size,
                                 rank=rank, timeout=datetime.timedelta(seconds=3000))   # Avoid timeout issues
+        torch.cuda.set_device(rank)   # Set device for the current process (by global unique rank)
         dist.barrier()
 
         # Load Data
@@ -441,17 +493,43 @@ class Trainer:
             ddp=self.ddp,
         )
 
+    def _save_traces_data(self: Any) -> None:
+        """Save training trace and sample trace data."""
+        # Save training trace data
+        save_dir: str = self.save_config.TRAIN_TRACE_DIR
+        os.makedirs(save_dir, exist_ok=True)
+
+        train_trace: Dict[Optional[List[float]]] = {
+            "train_losses": self.train_losses,
+            "valid_losses": self.valid_losses,
+            "valid_bleu_scores": self.valid_bleu_scores,
+            "best_loss": self.best_loss,
+            "best_bleu": self.best_bleu,
+        }
+        save_obj_by_pickle(save_dir, "train_trace.pkl", train_trace)
+
+        # Save sample trace data
+        save_dir: str = self.save_config.SAMPLE_TRACE_DIR
+        os.makedirs(save_dir, exist_ok=True)
+
+        save_obj_by_pickle(save_dir, "sample_trace.pkl", self.sample_trace)
+
     def train(self: Any) -> None:
         """Train the model based on the DDP flag."""
+        # Train the model
         if self.ddp == True:
             self._train_with_ddp()
         else:
             self._train_without_ddp()
 
+        # Save training trace data
+        if (self.ddp == False) or (self.ddp == True):
+            self._save_traces_data()
+
 
 if __name__ == '__main__':
     """Example usage of the Trainer class."""
-    # remove warnings
+    # Remove warnings
     import warnings
     warnings.filterwarnings("ignore")
 
@@ -459,12 +537,14 @@ if __name__ == '__main__':
     dataset_config: DatasetConfig = DatasetConfig()
     model_config: ModelConfig = ModelConfig()
     train_config: TrainConfig = TrainConfig()
+    save_config: SaveConfig = SaveConfig()
 
     # Create a Trainer instance
     trainer: Trainer = Trainer(
         dataset_config=dataset_config,
         model_config=model_config,
         train_config=train_config,
+        save_config=save_config,
         ddp=True,  # Set to True for DDP training
     )
 

@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from typing import Any
 
-from src.model.blocks.encoder_layer import EncoderLayer
-from src.model.layers.embedding import TransformerEmbedding
+from src.models.blocks.encoder_layer import EncoderLayer
+from src.models.layers.embedding import TransformerEmbedding
 
 
 class Encoder(nn.Module):
