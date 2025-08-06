@@ -5,7 +5,7 @@
         --en_tokenizer="bert-base-uncased" \
         --checkpoint_dir="./outs/bert-with-ddp/checkpoints" \
         --train_trace_dir="./outs/bert-with-ddp/train_traces" \
-        --save_sample_batch_num=1 \
+        --save_sample_batch_num=3 \
         --sample_trace_dir="./outs/bert-with-ddp/sample_traces" \
         --ddp
 ) 2>&1 | tee ./logs/bert-with-ddp.log
@@ -18,7 +18,7 @@
             --en_tokenizer="bert-base-uncased" \
             --checkpoint_dir="./outs/bert-no-ddp/checkpoints" \
             --train_trace_dir="./outs/bert-no-ddp/train_traces" \
-            --save_sample_batch_num=1 \
+            --save_sample_batch_num=3 \
             --sample_trace_dir="./outs/bert-no-ddp/sample_traces"
     } 2>&1
 
@@ -31,7 +31,7 @@
         --en_tokenizer="en_core_web_sm" \
         --checkpoint_dir="./outs/spacy-with-ddp/checkpoints" \
         --train_trace_dir="./outs/spacy-with-ddp/train_traces" \
-        --save_sample_batch_num=1 \
+        --save_sample_batch_num=3 \
         --sample_trace_dir="./outs/spacy-with-ddp/sample_traces" \
         --ddp
 ) 2>&1 | tee ./logs/spacy-with-ddp.log
@@ -44,7 +44,7 @@
             --en_tokenizer="en_core_web_sm" \
             --checkpoint_dir="./outs/spacy-no-ddp/checkpoints" \
             --train_trace_dir="./outs/spacy-no-ddp/train_traces" \
-            --save_sample_batch_num=1 \
+            --save_sample_batch_num=3 \
             --sample_trace_dir="./outs/spacy-no-ddp/sample_traces"
     } 2>&1
 

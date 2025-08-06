@@ -1,3 +1,7 @@
+# [Note]:
+# - Using Python’s -u option enables unbuffered binary stdout and stderr.
+# - Ensuring that output from shell scripts is immediately displayed in the terminal without delay caused by buffering.
+
 # bert tokenizer, with DDP
 (
     time torchrun --nproc_per_node=4 --nnodes=1 --node_rank=0 -m src.train \

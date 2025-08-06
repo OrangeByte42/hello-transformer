@@ -1,10 +1,14 @@
 # 1.1
 
+- v1.1.4 refactored code & README.md docs;
 - v1.1.3 bug fix & support DDP & code refactoring;
 - v1.1.2 bug fix;
 - v1.1.1 Transformer implementation initially;
 
 ## Added
+
+**v1.1.4**:
+- v1.1.4 added README.md;
 
 **v1.1.3**:
 - v1.1.3 updated 'CHANGELOG.md' and 'README.md';
