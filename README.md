@@ -19,10 +19,14 @@
     <img src="https://img.shields.io/badge/Latest Release-No-red">
     </br>
     <!-- Project development environment -->
-    <img src="https://img.shields.io/badge/Ubuntu-20.04.6 LTS-E95420?logo=ubuntu&logoColor=white">
-    <img src="https://img.shields.io/badge/Python-3.9.23-3776AB?logo=python&logoColor=white">
-    <img src="https://img.shields.io/badge/Intel-Xeon Silver 4210R-0071C5?logo=intel&logoColor=white">
-    <img src="https://img.shields.io/badge/Nvidia-4 x RTX 3070 8GB-76B900?logo=nvidia&logoColor=white">
+    <img src="https://img.shields.io/badge/Ubuntu-20.04.6 LTS-E95420?logo=ubuntu">
+    <img src="https://img.shields.io/badge/Intel-Xeon Silver 4210R-0071C5?logo=intel">
+    <img src="https://img.shields.io/badge/Nvidia-4 x RTX 3070 8GB-76B900?logo=nvidia">
+    </br>
+    <img src="https://img.shields.io/badge/Python-3.9.23-3776AB?logo=python">
+    <img src="https://img.shields.io/badge/PyTorch-2.7.1+cu128-EE4C2C?logo=pytorch">
+    <img src="https://img.shields.io/badge/Transformers-4.54.1-FFD21E?logo=huggingface">
+    <img src="https://img.shields.io/badge/SpaCy-3.7.0-09A3D5?logo=spacy">
     </br>
     <!-- Documentation -->
     <img src="https://img.shields.io/badge/License-GPL3-238636">

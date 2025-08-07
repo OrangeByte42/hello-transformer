@@ -22,19 +22,19 @@ class ModelConfig:
     D_MODEL: int = 512
     NUM_HEADS: int = 8
     D_FF: int = 2048
-    DROP_PROB: float = 0.2
+    DROP_PROB: float = 0.1
 
 
 @dataclass
 class TrainConfig:
     """Configuration for training parameters."""
-    INIT_LR: float = 1e-4
+    INIT_LR: float = 1e-5
     FACTOR: float = 0.9
     ADAM_EPS: float = 5e-9
     PATIENCE: int = 10
     CLIP: float = 1.0
     WEIGHT_DECAY: float = 5e-4
-    WARMUP: int = 50
+    WARMUP: int = 20
     EPOCHS_NUM: int = 100
 
 
