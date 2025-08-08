@@ -219,15 +219,16 @@ class Trainer:
         return global_avg_loss
 
     def _epoch_validate(self: Any, model: Transformer, generator: AutoregressiveTransformer,
-                        valid_iter: torch.utils.data.DataLoader, criterion: nn.CrossEntropyLoss,
-                        max_seq_len: int, trg_tokenizer: Tokenizer, evaluator: BLEUScoreEvaluator,
-                        device: torch.device, ddp: bool) -> Tuple[float, float]:
+                        valid_iter: torch.utils.data.DataLoader, criterion: nn.CrossEntropyLoss, max_seq_len: int,
+                        src_tokenizer: Tokenizer, trg_tokenizer: Tokenizer,
+                        evaluator: BLEUScoreEvaluator, device: torch.device, ddp: bool) -> Tuple[float, float]:
         """Validate the model for one epoch.
         @param model: The Transformer model to validate.
         @param generator: Autoregressive generator for generating hypotheses.
         @param valid_iter: DataLoader for the validation data.
         @param criterion: Loss function for validation.
         @param max_seq_len: Maximum sequence length for generation.
+        @param src_tokenizer: Tokenizer for source language.
         @param trg_tokenizer: Tokenizer for target language.
         @param evaluator: BLEU score evaluator for validation.
         @param device: The device (CPU or GPU) to run the validation on.
@@ -271,6 +272,7 @@ class Trainer:
                 batch_size: int = src_X.shape[0]
                 for sample_idx in range(batch_size):   # Iterate over samples in the current batch
                     # Get the current reference and hypothesis sequences
+                    src_token_ids: List[int] = src_X[sample_idx, :].cpu().numpy().tolist()
                     trg_token_ids: List[int] = trg_X[sample_idx, :].cpu().numpy().tolist()
                     pred_token_ids: List[int] = generated_seqs[sample_idx, :].cpu().numpy().tolist()
 
@@ -281,17 +283,20 @@ class Trainer:
                     # Record sample traces for analysis
                     if batch_idx < self.sample_batch_num:
                         # Decode the reference and hypothesis sequences to text
+                        src_text: str = src_tokenizer.decode(src_token_ids, skip_special_tokens=True)
                         trg_text: str = trg_tokenizer.decode(trg_token_ids, skip_special_tokens=True)
                         pred_text: str = trg_tokenizer.decode(pred_token_ids, skip_special_tokens=True)
 
                         # Save the sample trace
                         if len(self.sample_trace) <= saved_sample_count:
                             self.sample_trace.append({
+                                "src": src_text,
                                 "ref": trg_text,
                                 "hyp": [pred_text],
                             })
                         else:
-                            assert self.sample_trace[saved_sample_count]["ref"] == trg_text, "Sample trace reference mismatch"
+                            assert self.sample_trace[saved_sample_count]["src"] == src_text, "Sample trace source mismatch."
+                            assert self.sample_trace[saved_sample_count]["ref"] == trg_text, "Sample trace reference mismatch."
                             self.sample_trace[saved_sample_count]["hyp"].append(pred_text)
                         saved_sample_count += 1
 
@@ -342,12 +347,13 @@ class Trainer:
         # Return the average validation loss and BLEU score
         return global_avg_loss, global_bleu_score
 
-    def _train(self: Any, model: Transformer, trg_tokenizer: Tokenizer,
+    def _train(self: Any, model: Transformer, src_tokenizer: Tokenizer, trg_tokenizer: Tokenizer,
                 train_iter: torch.utils.data.DataLoader, valid_iter: torch.utils.data.DataLoader,
                 optimizer: Any, scheduler: Any, criterion: nn.CrossEntropyLoss,
                 device: torch.device, ddp: bool) -> None:
         """Train the model for multiple epochs with validation.
         @param model: The Transformer model to train.
+        @param src_tokenizer: Tokenizer for source language.
         @param trg_tokenizer: Tokenizer for target language.
         @param train_iter: DataLoader for the training data.
         @param valid_iter: DataLoader for the validation data.
@@ -383,7 +389,7 @@ class Trainer:
             if ddp == True: train_iter.sampler.set_epoch(epoch)
             train_loss: float = self._epoch_train(model, train_iter, optimizer, criterion, clip, device, ddp)
             valid_loss, valid_bleu = self._epoch_validate(model, generator, valid_iter, criterion, max_seq_len,
-                                                            trg_tokenizer, evaluator, device, ddp)
+                                                            src_tokenizer, trg_tokenizer, evaluator, device, ddp)
             end_time: float = time.time()
 
             # Step the scheduler
@@ -448,6 +454,7 @@ class Trainer:
         # Start Training
         self._train(
             model=transformer,
+            src_tokenizer=data_loader.de_tokenizer,
             trg_tokenizer=data_loader.en_tokenizer,
             train_iter=train_iter,
             valid_iter=valid_iter,
@@ -483,6 +490,7 @@ class Trainer:
         # Start Training
         self._train(
             model=transformer,
+            src_tokenizer=data_loader.de_tokenizer,
             trg_tokenizer=data_loader.en_tokenizer,
             train_iter=train_iter,
             valid_iter=valid_iter,
@@ -503,8 +511,6 @@ class Trainer:
             "train_losses": self.train_losses,
             "valid_losses": self.valid_losses,
             "valid_bleu_scores": self.valid_bleu_scores,
-            "best_loss": self.best_loss,
-            "best_bleu": self.best_bleu,
         }
         save_obj_by_pickle(save_dir, "train_trace.pkl", train_trace)
 

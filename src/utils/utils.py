@@ -51,12 +51,3 @@ def save_obj_by_pickle(save_dir: str, file_name: str, obj: Any) -> None:
     with open(save_path, 'wb') as f:
         pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-def load_obj_by_pickle(save_path: str) -> Any:
-    """Load an object from a pickle file.
-    @param save_path: Path to the pickle file
-    @return: Loaded object
-    """
-    with open(save_path, 'rb') as f:
-        obj: Any = pickle.load(f)
-    return obj
-

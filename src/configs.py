@@ -22,27 +22,27 @@ class ModelConfig:
     D_MODEL: int = 512
     NUM_HEADS: int = 8
     D_FF: int = 2048
-    DROP_PROB: float = 0.1
+    DROP_PROB: float = 0.35
 
 
 @dataclass
 class TrainConfig:
     """Configuration for training parameters."""
-    INIT_LR: float = 1e-5
-    FACTOR: float = 0.9
-    ADAM_EPS: float = 5e-9
-    PATIENCE: int = 10
-    CLIP: float = 1.0
-    WEIGHT_DECAY: float = 5e-4
-    WARMUP: int = 20
+    WEIGHT_DECAY: float = 1e-4
     EPOCHS_NUM: int = 100
+    WARMUP: int = 20
+    INIT_LR: float = 7e-5
+    ADAM_EPS: float = 1e-8
+    PATIENCE: int = 4
+    FACTOR: float = 0.3
+    CLIP: float = 0.7
 
 
 @dataclass
 class SaveConfig:
     """Configuration for saving."""
     CHECKPOINT_DIR: str = os.path.join(".", "outs", "checkpoints")
-    TRAIN_TRACE_DIR: str = os.path.join(".", "outs", "train_traces")
+    TRAIN_TRACE_DIR: str = os.path.join(".", "outs", "train_trace")
     SAVE_SAMPLE_BATCH_NUM: int = 1
-    SAMPLE_TRACE_DIR: str = os.path.join(".", "outs", "sample_traces")
+    SAMPLE_TRACE_DIR: str = os.path.join(".", "outs", "sample_trace")
 

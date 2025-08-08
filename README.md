@@ -50,11 +50,17 @@ This project reproduces **Basic Transformer Architecture** in 《Attention Is Al
 
 ### Training Trace (Loss/PPL/BLEU)
 
-TBD
+<div align="center">
+    <img src="assets/train_trace.png" style="width:600px;">
+</div>
+
 
 ### Prediction Trace
 
-TBD
+<div align="center">
+    <img src="assets/sample_00.png" style="height:200px;">
+    <img src="assets/sample_01.png" style="height:200px;">
+</div>
 
 
 ## 🚀 Getting Started
