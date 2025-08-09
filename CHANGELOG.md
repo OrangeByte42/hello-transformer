@@ -9,6 +9,7 @@
 
 **v1.1.4**:
 - v1.1.4 added README.md;
+- v1.1.4 added visualization scripts;
 
 **v1.1.3**:
 - v1.1.3 updated 'CHANGELOG.md' and 'README.md';

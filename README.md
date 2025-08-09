@@ -1,6 +1,6 @@
 <img src="assets/header_img.png" style="width: 100%; height: auto; margin-bottom: 30px;">
 
-<h1 align="center" style="font-weight: bold;">hello-transformer 👋🤖</h1>
+<h1 align="center" style="font-weight: bold;">transformer 👋🤖</h1>
 
 <p align="center">
     <a href="#-getting-started">🚀 Getting Started</a> -
@@ -41,7 +41,7 @@
 
 ### Introduction
 
-This project reproduces **Basic Transformer Architecture** in 《Attention Is All You Need》. Train transformer model in Multi30k dataset (DE2EN), and archieved a maximum BLEU score of 27-28.
+This project reproduces **Basic Transformer Architecture** by **PyTorch** in 《Attention Is All You Need》. Train transformer model in Multi30k dataset (DE2EN), and archieved a maximum BLEU score of 28-29.
 - *Tokenizer*: BERT / SpaCy (configurable);
 - *Training Mode*: DDP / Non-DDP (configurable);
 - *Training Method*: Teacher Forcing;
@@ -57,10 +57,41 @@ This project reproduces **Basic Transformer Architecture** in 《Attention Is Al
 
 ### Prediction Trace
 
-<div align="center">
-    <img src="assets/sample_00.png" style="height:200px;">
-    <img src="assets/sample_01.png" style="height:200px;">
-</div>
+```txt
+[[[Input Prompt]]]:             Ein Mann mit beginnender Glatze, der eine rote Rettungsweste trägt, sitzt in einem kleinen Boot.
+[[[Reference]]]:                a balding man wearing a red life jacket is sitting in a small boat.
+
+[[[Transformer Hypotheses]]]:
+Epoch 00----------------a man in a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a with a.
+Epoch 01----------------a man in a blue shirt is wearing a blue shirt is wearing a blue shirt is wearing a blue shirt, wearing a blue shirt is is is sitting with a man, with a man, wearing a man with a man with a man with a man with a man, wearing a man, wearing a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with a man with his - - - - - - - - - - - - with his - - - - - with his - with his
+Epoch 02----------------a man in a red shirt is sitting on a red hat with a red hat with his hat with his hat.
+Epoch 03----------------a man wearing a red hat is sitting on a red chair with a red car....
+Epoch 04----------------a man wearing a long - hair is sitting in a red boat with a small boat..
+Epoch 05----------------a man wearing a bright red vest is sitting in a small boat..
+Epoch 06----------------a bald man wearing a red vest is wearing a red vest is sitting in a small boat.
+Epoch 07----------------a balding man wearing a red life jacket is sitting in a small boat..
+Epoch 08----------------a balding man wearing a red life jacket is sitting in a small boat.
+Epoch 09----------------a bald man wearing a red life jacket is wearing a red life jacket is sitting in a boat.
+Epoch 10----------------a balding man wearing a red life vest is sitting in a small boat..
+Epoch 15----------------a bald man wearing a red life vest sits in a small boat....
+Epoch 20----------------a balding man wearing a red life jacket is sitting in a small boat..
+Epoch 25----------------a balding man wearing a red life jacket is sitting in a small boat..
+Epoch 30----------------a balding man wearing a red life jacket sits in a small boat...
+Epoch 35----------------a balding man wearing a red life jacket sits in a small boat...
+Epoch 40----------------a balding man wearing a red life vest is sitting in a small boat...
+Epoch 45----------------a balding man wearing a red life vest is sitting in a small boat...
+Epoch 50----------------a balding man wearing a red life vest is sitting in a small boat...
+Epoch 55----------------a balding man wearing a red life vest is sitting in a small boat..
+Epoch 60----------------a balding balding in a red life jacket sits in a small boat..
+Epoch 65----------------a balding man wearing a red life vest is sitting in a small boat....
+Epoch 70----------------a balding man wearing a red life vest is sitting in a small boat..
+Epoch 75----------------a balding man in a red life vest is sitting in a small boat...
+Epoch 80----------------a balding man wearing a red life vest is sitting in a small boat...
+Epoch 85----------------a balding man wearing a red life vest is sitting in a small boat...
+Epoch 90----------------a balding man wearing a red life vest is sitting in a small boat...
+Epoch 95----------------a balding man wearing a red life vest is sitting in a small boat...
+```
+
 
 
 ## 🚀 Getting Started
@@ -113,10 +144,6 @@ Also, you can use scripts to train transformer:
 ```bash
 bash ./scripts/train.sh
 ```
-
-### Inferencing
-
-TBD
 
 
 ## 👥 Maintainers

@@ -1,6 +1,7 @@
 import os
 import argparse
 import warnings
+from typing import Any
 
 from src.configs import DatasetConfig, ModelConfig, TrainConfig, SaveConfig
 from src.trainer.trainer import Trainer
@@ -12,7 +13,7 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore")
 
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Train a Transformer model.")
+    parser: Any = argparse.ArgumentParser(description="Train a Transformer model.")
     # Dataset configurations
     parser.add_argument("--de_tokenizer", type=str, default="bert-base-german-dbmdz-cased", help="German tokenizer model name.")
     parser.add_argument("--en_tokenizer", type=str, default="bert-base-uncased", help="English tokenizer model name.")
@@ -29,7 +30,7 @@ if __name__ == '__main__':
     parser.add_argument("--ddp", action="store_true", help="Use Distributed Data Parallel (DDP) for training.")
 
     # Parse arguments once
-    args = parser.parse_args()
+    args: Any = parser.parse_args()
 
     # Create configuration instances
     # Dataset configurations

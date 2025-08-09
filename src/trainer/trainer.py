@@ -416,9 +416,25 @@ class Trainer:
                     self.best_bleu = valid_bleu
 
                     save_dir: str = self.save_config.CHECKPOINT_DIR
+                    save_filename: str = f"epoch-{epoch:0>{len(str(epochs_num))}}-valid_loss-{valid_loss:0>7.4f}-bleu-{valid_bleu:0>7.4f}.pt"
+                    save_path: str = os.path.join(save_dir, save_filename)
                     os.makedirs(save_dir, exist_ok=True)
 
-                    torch.save(actual_model.state_dict(), os.path.join(save_dir, f"epoch-{epoch:0>{len(str(epochs_num))}}-valid_loss-{valid_loss:0>7.4f}-bleu-{valid_bleu:0>7.4f}.pt"))
+                    checkpoint: Dict[str, Any] = {
+                        "epoch_idx": epoch,
+                        "model_state_dict": actual_model.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                        "scheduler_state_dict": scheduler.state_dict(),
+                        "train_loss": train_loss,
+                        "valid_loss": valid_loss,
+                        "valid_bleu": valid_bleu,
+                        "dataset_config": self.dataset_config,
+                        "model_config": self.model_config,
+                        "train_config": self.train_config,
+                        "save_config": self.save_config,
+                    }
+
+                    torch.save(checkpoint, save_path)
 
             if ddp == True: dist.barrier()
 
