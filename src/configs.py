@@ -28,14 +28,14 @@ class ModelConfig:
 @dataclass
 class TrainConfig:
     """Configuration for training parameters."""
-    WEIGHT_DECAY: float = 1e-3
-    EPOCHS_NUM: int = 1_000
-    WARMUP: int = 100
-    INIT_LR: float = 1e-4
-    ADAM_EPS: float = 5e-9
-    PATIENCE: int = 5
-    FACTOR: float = 0.9
-    CLIP: float = 1.0
+    WEIGHT_DECAY: float = 1e-4
+    EPOCHS_NUM: int = 100
+    WARMUP: int = 8
+    INIT_LR: float = 5e-5
+    ADAM_EPS: float = 1e-8
+    PATIENCE: int = 8
+    FACTOR: float = 0.8
+    CLIP: float = 0.7
 
 
 @dataclass
