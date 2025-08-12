@@ -1,9 +1,11 @@
-.venv/
-.vscode/
+/.venv
+/.vscode
 
 **/__pycache__
 
-temp
-data
-outs
-logs
+/temp
+/data
+/outs
+/logs
+
+
