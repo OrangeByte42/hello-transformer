@@ -54,6 +54,11 @@ This project reproduces **Basic Transformer Architecture** by **PyTorch** in 《
     <img src="assets/train_trace.png" style="width:600px;">
 </div>
 
+**Original transformer training results reference (Different Datasets)**:
+<div align="center">
+    <img src="assets/original_transformer_bleu.png" style="width:600px;">
+</div>
+
 
 ### Prediction Trace
 
