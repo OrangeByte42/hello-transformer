@@ -122,6 +122,7 @@ class SpacyTokenizer(Tokenizer):
         @param add_special_tokens: Whether to add special tokens (sos, eos)
         @param padding: Whether to pad the sequence to max_seq_len
         @param truncation: Whether to truncate the sequence to max_seq_len
+        @return: List of token IDs corresponding to the input text
         """
         # Tokenize the text
         tokens: List[str] = self._tokenize(text)

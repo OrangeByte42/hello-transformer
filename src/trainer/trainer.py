@@ -545,8 +545,7 @@ class Trainer:
             self._train_without_ddp()
 
         # Save training trace data
-        if (self.ddp == False) or (self.ddp == True):
-            self._save_traces_data()
+        self._save_traces_data()
 
 
 if __name__ == '__main__':
